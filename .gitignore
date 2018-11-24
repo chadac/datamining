@@ -1,0 +1,10 @@
+## mongo
+/data
+/logs
+
+## emacs
+*~
+
+## python
+__pycache__/
+*.pyc

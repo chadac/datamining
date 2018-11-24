@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  db:
+    image: mongo:latest
+    volumes:
+      - ./data:/data/db
+      - ./mongod.conf:/etc/mongod.conf
+      - ./logs:/var/log/mongodb/
+    command: 'mongod -f /etc/mongod.conf'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+
+  miner:
+    build: ./miner
+    links:
+      - db
+    volumes:
+      - ./app:/app
+    working_dir: '/app'
+    command: 'python3 main.py'
+
+networks:
+  default:
+  webproxy:
+    external:
+      name: ${NETWORK:-webproxy}
