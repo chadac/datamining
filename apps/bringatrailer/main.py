@@ -4,16 +4,20 @@ import requests
 from bs4 import BeautifulSoup
 import re, json
 import os
-import logging
+import logging, sys
 import traceback
 
 logger = logging.getLogger('bringatrailer')
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('logs/bringatrailer.log')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh = logging.FileHandler('output.log')
 fh.setLevel(logging.INFO)
-
-NAME = 'Bring a Trailer'
-UPDATE_INTERVAL = 60*60*24
+fh.setFormatter(formatter)
+oh = logging.StreamHandler(sys.stdout)
+oh.setLevel(logging.DEBUG)
+oh.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(oh)
 
 admin_url = 'https://bringatrailer.com/wp-admin/admin-ajax.php'
 img_path = 'media/bringatrailer/images/'
@@ -36,7 +40,7 @@ def mine_listings(page):
     r = json.loads(r.text)
     d = re.findall(r'"(https://bringatrailer.com/listing/[^/]+/)"',
                    r['auctions_results'])
-    return list(set(d)), r['max_pages']
+    return list(set(d)), int(r['max_pages'])
 
 
 def mine_listing(url):
@@ -71,36 +75,40 @@ def mine_listing(url):
         'description': soup.find('div', {'class':'post-excerpt'}).getText().strip(),
         'images': images
     }
-    print(result)
+
+    return result
 
 
-def mine(client):
-    db = client.bringatrailer
+def mine(db):
     page = 0
     max_pages = 10000
     total = 0
     while page <= max_pages:
         urls, max_pages = mine_listings(page)
-        logger.info('Loaded {} entries from page {}.'.format(len(urls), page))
+        logger.info('Loaded {} entries from page {} / {}.'.format(len(urls), page, max_pages))
         listings = []
         for url in urls:
-            logger.debug('url: {}'.format(url))
-            if db.listings.find({'url': url}).count() > 0:
+            if db.listings.find({'url': url, 'failed': {'$exists': False}}).count() > 0:
                 continue
-            count += 1
             try:
+                logger.debug('url: {}'.format(url))
                 listings += [mine_listing(url)]
             except Exception as e:
                 msg = traceback.format_exc()
                 logger.error('Failed to load {}:\n{}'.format(url, msg))
                 listings += [{'url': url, 'failed': True, 'msg': msg}]
 
-        if len(listings) <= 0:
-            break
-        else:
+        if len(listings):
             db.listings.insert_many(listings)
 
         page += 1
         total += len(listings)
 
     logger.info('{} listings inserted.'.format(total))
+
+
+if __name__ == '__main__':
+    from pymongo import MongoClient
+    client = MongoClient('db', username='root', password='root')
+    db = client.bringatrailer
+    mine(db)
