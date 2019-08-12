@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-import requests
 from bs4 import BeautifulSoup
 import re, json
 import os
 import logging, sys
 import traceback
+# import boto3
+import hashlib
+from lib.http import HTTP
 
 logger = logging.getLogger('bringatrailer')
 logger.setLevel(logging.DEBUG)
@@ -20,7 +22,14 @@ logger.addHandler(fh)
 logger.addHandler(oh)
 
 admin_url = 'https://bringatrailer.com/wp-admin/admin-ajax.php'
-img_path = 'media/bringatrailer/images/'
+img_path = './data'
+
+
+def gen_key(s):
+    m = hashlib.md5()
+    m.update(s)
+    return m.hexdigest()
+
 
 def mine_listings(page):
     data = {
@@ -51,15 +60,20 @@ def mine_listing(url):
     img_urls = [link.get('href') for link in soup.findAll('a', {'class': 'listing-gallery-image-container'})]
     images = []
 
-    if not os.path.exists(img_path + '{}'.format(slug)):
-        os.makedirs(img_path + '{}'.format(slug))
+    if not os.path.exists('{img_path}/{slug}'):
+        os.makedirs('{img_path}/{slug}')
 
     for i, img_url in enumerate(img_urls):
+        img_key = gen_key(url + img_url)
         ext = re.search(r'\.([^.^/]+)$', img_url).group(1)
-        path = img_path + '{}/{:03d}.{}'.format(slug, i, ext)
+        path = f'{img_path}/{slug}/{i:03d}.{ext}'
         r1 = requests.get(img_url)
-        with open(path, 'wb') as f:
+        with open(f'./data/{img_key}.{ext}', 'w') as f:
             f.write(r1.content)
+        # try:
+        #     bucket.Object(path).load()
+        # except botocore.exceptions.ClientError:
+        #     bucket.Object(path).put(Body=r1.content)
         images += [{
             'url': img_url,
             'path': path

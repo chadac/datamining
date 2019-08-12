@@ -1,9 +1,10 @@
 ## mongo
 /data
-/logs
+/log
 
-## emacs
-*~
+## configuration
+/config
+
 
 ## python
 __pycache__/

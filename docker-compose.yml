@@ -4,13 +4,31 @@ services:
   db:
     image: mongo:latest
     volumes:
-      - ./data:/data/db
+      - ./data/db:/data/db
       - ./mongod.conf:/etc/mongod.conf
-      - ./logs:/var/log/mongodb/
+      - ./log/mongo:/var/log/mongodb/
     command: 'mongod -f /etc/mongod.conf'
     environment:
       - MONGO_INITDB_ROOT_USERNAME=root
       - MONGO_INITDB_ROOT_PASSWORD=root
+    restart: always
+
+  craigslist-cto:
+    build: ./miner
+    links:
+      - db
+    volumes:
+      - ./apps/craigslist:/app
+      - ./lib:/app/lib
+      - ./log:/app/log
+      - ./data/craigslist:/app/data
+    environment:
+      - APP_NAME=craigslist_cto
+      - CL_CATEGORY=cto
+      - DATA_DIRECTORY=/app/data
+      - MONGO_URL=db
+      - LOGGER_FILE=/app/log/craigslist.cto.log
+    restart: always
 
   # bringatrailer:
   #   build: ./miner
@@ -18,22 +36,14 @@ services:
   #     - db
   #   volumes:
   #     - ./apps/bringatrailer:/app
+  #     - ./config/app:/app/conf
+  #     - ./lib:/app/lib
+  #     - ./data/bringatrailer:/app/data
   #   working_dir: '/app'
-  #   user: $UID
   #   command: 'python3 main.py'
 
-  craigslist:
-    build: ./miner
-    links:
-      - db
-    volumes:
-      - ./apps/craigslist:/app
-    working_dir: '/app'
-    user: $UID
-    command: 'python3 main.py'
-
-networks:
-  default:
-  webproxy:
-    external:
-      name: ${NETWORK:-webproxy}
+# networks:
+#   default:
+#   webproxy:
+#     external:
+#       name: ${NETWORK:-webproxy}
