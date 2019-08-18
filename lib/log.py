@@ -6,21 +6,20 @@ import logging
 
 APP_NAME = os.environ.get('APP_NAME', 'default')
 LOGGER_LEVEL = os.environ.get('LOGGER_LEVEL', logging.INFO) ## default: info
-LOGGER_FILE = os.environ.get('LOGGER_FILE', '/app/log/app.log')
+LOGGER_FILE = os.environ.get('LOGGER_FILE', None)
 
 
 logger = logging.getLogger(APP_NAME)
 logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('[%(name)s] [%(asctime)s] [%(levelname)s] - %(message)s')
 
-fh = logging.FileHandler(LOGGER_FILE)
-fh.setLevel(int(LOGGER_LEVEL))
+if LOGGER_FILE:
+    fh = logging.FileHandler(LOGGER_FILE)
+    fh.setLevel(int(LOGGER_LEVEL))
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
 sh = logging.StreamHandler(sys.stdout)
 sh.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('[%(name)s] [%(asctime)s] [%(levelname)s] - %(message)s')
-fh.setFormatter(formatter)
 sh.setFormatter(formatter)
-
-logger.addHandler(fh)
 logger.addHandler(sh)

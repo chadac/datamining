@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from lib.http import HTTP
+from lib.log import logger
 from bs4 import BeautifulSoup
 import re, json
 import os
@@ -20,8 +21,8 @@ img_url_fmt = 'https://images.craigslist.org/{}_{}_{}x{}.{}'
 def fetch_cities():
     r = http.get('https://geo.craigslist.org/iso/us')
     html = r.text
-    urls = re.findall(r'"https://([a-zA-Z0-9]+)\.craigslist\.org"', html)
-    return list(set(urls))
+    cities = re.findall(r'"https://([a-zA-Z0-9]+)\.craigslist\.org"', html)
+    return list(set(cities))
 
 
 def fetch_listings(city, category, s=0):
@@ -35,7 +36,9 @@ def fetch_listings(city, category, s=0):
         listing = {
             'title': title.getText().strip(),
             'url': title['href'],
-            'id': title['data-id']
+            'id': title['data-id'],
+            'city': city,
+            'category': category
         }
         price = result.find('span', {'class': 'result-price'})
         listing['short'] = True
@@ -56,6 +59,9 @@ def get_detailed_listing(data):
     r = http.get(data['url'])
     soup = BeautifulSoup(r.text, 'html.parser')
     attrs = {}
+    mmy = soup.find('p', {'class': 'attrgroup'})
+    if mmy:
+        attrs['make_model_year'] = mmy.text
     for attrgroup in soup.findAll('p', {'class': 'attrgroup'}):
         for span in attrgroup.findAll('span'):
             if not ':' in span.text:
@@ -90,17 +96,36 @@ def get_detailed_listing(data):
     data['short'] = False
 
 
+def download_image(img, image_dir):
+    path = image_dir / f"{img['id']}.{img['ext']}"
+    url = img_url_fmt.format(img['prefix'], img['id'], 1200, 900, img['ext'])
+    try:
+        if not path.exists():
+            r = image_http.get(url)
+            img['path'] = str(path)
+            with open(path, 'wb') as f:
+                f.write(r.content)
+        else:
+            img['path'] = None
+    except Exception as e:
+        img['path'] = None
+        logger.error(f"Could not download image from {url}:\n{traceback.format_exc()}")
+
+
 def download_images(images, image_dir):
     if not image_dir:
         ## will not be downloading
         return
 
     for img in images:
-        path = image_dir / f"{img['id']}.{img['ext']}"
-        if not path.exists():
+        try:
+            path = image_dir / f"{img['id']}.{img['ext']}"
             url = img_url_fmt.format(img['prefix'], img['id'], 1200, 900, img['ext'])
-            r = image_http.get(url)
-            img['path'] = str(path)
-            with open(path, 'wb') as f:
-                f.write(r.content)
+            if not path.exists():
+                r = image_http.get(url)
+                img['path'] = str(path)
+                with open(path, 'wb') as f:
+                    f.write(r.content)
+        except Exception as e:
+            logger.error(f"Could not download image from {url}:\n{traceback.format_exc()}")
     return images

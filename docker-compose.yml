@@ -21,13 +21,44 @@ services:
       - ./apps/craigslist:/app
       - ./lib:/app/lib
       - ./log:/app/log
-      - ./data/craigslist:/app/data
     environment:
       - APP_NAME=craigslist_cto
       - CL_CATEGORY=cto
-      - DATA_DIRECTORY=/app/data
       - MONGO_URL=db
       - LOGGER_FILE=/app/log/craigslist.cto.log
+      - HOUR=*
+    restart: always
+
+  craigslist-images:
+    build: ./miner
+    links:
+      - db
+    volumes:
+      - ./apps/craigslist:/app
+      - ./lib:/app/lib
+      - ./log:/app/log
+      - ./data/craigslist:/app/data
+    environment:
+      - APP_NAME=craigslist_images
+      - APP_FILE=image_app.py
+      - DATA_DIRECTORY=/app/data
+      - MONGO_URL=db
+      - LOGGER_FILE=/app/log/craigslist.images.log
+      - HOUR=*
+    restart: always
+
+  autotrader:
+    build: ./miner
+    links:
+      - db
+    volumes:
+      - ./apps/autotrader:/app
+      - ./lib:/app/lib
+      - ./log:/app/log
+    environment:
+      - APP_NAME=autotrader
+      - MONGO_URL=db
+      - LOGGER_FILE=/app/log/autotrader.log
     restart: always
 
   # bringatrailer:

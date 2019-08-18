@@ -54,7 +54,7 @@ class HTTP:
         if r:
             return r
         else:
-            raise Exception(f"Could not retrieve URL: {e}")
+            raise Exception(f"Could not retrieve URL: {err}")
 
     # def post(self, url, *args, **kwargs):
     #     self._start_request()

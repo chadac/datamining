@@ -15,4 +15,4 @@ fi
 # https://superuser.com/a/1240860
 set -a; source /etc/environment; set +a;
 
-python3 /app/app.py
+python3 /app/$APP_FILE
